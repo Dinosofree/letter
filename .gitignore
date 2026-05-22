@@ -43,3 +43,14 @@ next-env.d.ts
 # serwist build output
 public/sw.js
 public/swe-worker-*.js
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
