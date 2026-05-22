@@ -1,9 +1,12 @@
 name: Build APK
 
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Your deployed app URL (e.g. https://letter-archive.vercel.app)"
+        required: true
+        default: "https://letter-archive.vercel.app"
 
 jobs:
   build-apk:
@@ -25,28 +28,23 @@ jobs:
 
       - name: Initialize TWA project
         run: |
-          bubblewrap init --manifest="${{ secrets.APP_URL }}/manifest.webmanifest" --directory=./twa
+          APP_URL="${{ github.event.inputs.app_url }}"
+          bubblewrap init --manifest="$APP_URL/manifest.webmanifest" --directory=./twa
+
+      - name: Copy custom icons
+        run: |
+          cp android/app/src/main/res/drawable/ic_foreground.png twa/app/src/main/res/drawable/ 2>/dev/null || true
+          cp android/app/src/main/res/drawable/ic_background.png twa/app/src/main/res/drawable/ 2>/dev/null || true
 
       - name: Build APK
         run: |
           cd twa
           bubblewrap build
-          cp app/build/outputs/apk/release/app-release-unsigned.apk ../letter-archive.apk
+          ls app/build/outputs/apk/release/
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: letter-archive-apk
-          path: letter-archive.apk
-          retention-days: 30
-
-      - name: Create Release
-        if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: apk-latest
-          name: "信件档案 APK"
-          files: letter-archive.apk
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: twa/app/build/outputs/apk/release/*.apk
+          retention-days: 90
