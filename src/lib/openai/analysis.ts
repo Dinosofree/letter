@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ANALYSIS_PROMPTS } from "@/lib/prompts/analysis";
+import { ANALYSIS_PROMPTS, getSearchSynthesisPrompt, getMemoryDocPrompt } from "@/lib/prompts/analysis";
 import type { AnalysisType } from "@/types";
 
 const openai = new OpenAI({
@@ -25,38 +25,52 @@ export async function analyzeLetter(
   return response.choices[0].message.content ?? "";
 }
 
-export async function synthesizeSearch(
-  query: string,
-  letters: { date: string; sender: string; receiver: string; content: string }[]
-): Promise<string> {
-  const formatted = letters
+type LetterSnippet = {
+  date: string;
+  sender: string;
+  receiver: string;
+  content: string;
+  platform?: string;
+};
+
+function formatLetters(letters: LetterSnippet[]): string {
+  return letters
     .map(
       (l, i) =>
-        `[${i + 1}] Date: ${l.date} | ${l.sender} → ${l.receiver}\n${l.content.slice(0, 800)}`
+        `[${i + 1}] Date: ${l.date} | ${l.sender || "?"} → ${l.receiver || "?"} | ${l.platform || ""}\n${l.content.slice(0, 1000)}`
     )
     .join("\n\n---\n\n");
+}
+
+export async function synthesizeSearch(
+  query: string,
+  letters: LetterSnippet[]
+): Promise<string> {
+  const formatted = formatLetters(letters);
+  const systemPrompt = getSearchSynthesisPrompt(query, formatted);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `A person searched their personal letter archive for: "${query}"
-Below are the most relevant letters found, with dates and excerpts.
-
-${formatted}
-
-Please provide:
-1. Key excerpts most relevant to the query (with dates)
-2. Observable patterns across time
-3. A concise summary
-
-Stay grounded in what the letters actually say. Do not speculate beyond the text.
-Use the same language as the query for your response.`,
-      },
-    ],
+    messages: [{ role: "system", content: systemPrompt }],
     temperature: 0.7,
-    max_tokens: 1000,
+    max_tokens: 1500,
+  });
+
+  return response.choices[0].message.content ?? "";
+}
+
+export async function generateMemoryDoc(
+  query: string,
+  letters: LetterSnippet[]
+): Promise<string> {
+  const formatted = formatLetters(letters);
+  const systemPrompt = getMemoryDocPrompt(query, formatted);
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "system", content: systemPrompt }],
+    temperature: 0.7,
+    max_tokens: 2000,
   });
 
   return response.choices[0].message.content ?? "";

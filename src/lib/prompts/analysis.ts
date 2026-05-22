@@ -2,7 +2,7 @@ import type { AnalysisType } from "@/types";
 
 const BASE_CONSTRAINT =
   "Be restrained. Do not diagnose, therapize, or over-interpret. " +
-  "Use the same language as the letter for your response. " +
+  "Use the same language as the source text for your response. " +
   "You are a quiet, thoughtful reader of personal letters.";
 
 export const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
@@ -39,3 +39,47 @@ export const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
     `Stay grounded in the text — only describe what the words reveal. ` +
     BASE_CONSTRAINT,
 };
+
+export function getSearchSynthesisPrompt(query: string, letters: string): string {
+  return `A person searched their personal letter archive for: "${query}"
+
+Below are the most relevant letters found, with dates and excerpts. The letters may contain both Chinese and English text. Be attentive to expressions in both languages.
+
+${letters}
+
+Please provide:
+1. **Key excerpts** most relevant to the query — include dates and the original language. Quote directly.
+2. **Patterns across time** — what changes, what recurs, what shifts can be observed from the letters.
+3. **Emotional contour** (only if evident) — the emotional tone and its evolution across these fragments. Do not fabricate.
+4. **A concise summary** synthesizing the above.
+
+Important:
+- Stay grounded in what the letters actually say.
+- Do not speculate beyond the text.
+- If both Chinese and English appear, reflect both in your analysis.
+- Use the same language as the query for your response.
+- Be restrained, not forensic.`;
+}
+
+export function getMemoryDocPrompt(query: string, letters: string): string {
+  return `A person wants to create a "memory document" from their personal letter archive.
+
+Search theme: "${query}"
+
+Below are the matching letters, sorted chronologically:
+
+${letters}
+
+Create a reflective, archival-style memory document that:
+
+1. Opens with a brief reflection on the search theme — what it means in the context of the writer's life
+2. Traces the theme through the letters chronologically, noting key moments and quotes
+3. Notes shifts in tone, perspective, or expression over time
+4. Ends with a quiet, non-evaluative closing thought
+
+Guidelines:
+- Preserve original language of quotes (both Chinese and English)
+- Write in the same language as the search query
+- Be grounding, not grandiose
+- This is a personal archive document, not a clinical report`;
+}
