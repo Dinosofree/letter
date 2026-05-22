@@ -1,0 +1,52 @@
+name: Build APK
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Initialize TWA project
+        run: |
+          bubblewrap init --manifest="${{ secrets.APP_URL }}/manifest.webmanifest" --directory=./twa
+
+      - name: Build APK
+        run: |
+          cd twa
+          bubblewrap build
+          cp app/build/outputs/apk/release/app-release-unsigned.apk ../letter-archive.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: letter-archive-apk
+          path: letter-archive.apk
+          retention-days: 30
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: "信件档案 APK"
+          files: letter-archive.apk
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
